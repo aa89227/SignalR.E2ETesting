@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SignalR.E2ETesting\SignalR.E2ETesting.csproj" />
     <ProjectReference Include="..\ExampleWebApplication\ExampleWebApplication.csproj" />
   </ItemGroup>
 

@@ -2,10 +2,10 @@
 
 namespace ExampleWebApplication.Hubs;
 
-public class ExampleHub : Hub
+public class ExampleHub : Hub<IExampleHubResponses>
 {
-    public Task Broadcast(string message)
+    public async Task Broadcast(string message)
     {
-        return Clients.All.SendAsync("Broadcast", message);
+        await Clients.All.BroadcastMessage(message);
     }
 }
