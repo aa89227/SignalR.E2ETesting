@@ -29,6 +29,95 @@ internal class HubAssertBuilder<T>
         FieldBuilder fieldBuilder = typeBuilder.DefineField("methodAndParams", typeof(BlockingCollection<MethodAndParam>), FieldAttributes.Private);
 
         // Add the constructor.
+        CreateConstructor(typeBuilder, fieldBuilder);
+
+        // Add the method implementations to the type.
+        // Use TakeAndCompare to compare the method name and parameters.
+        foreach (var method in typeof(T).GetMethods())
+        {
+            CreateMethod(typeBuilder, method, fieldBuilder);
+        }
+
+        // Create the type and return it.
+        return typeBuilder.CreateType()!;
+    }
+
+    private static void CreateMethod(TypeBuilder typeBuilder, MethodInfo method, FieldBuilder fieldBuilder)
+    {
+        var methodAttributes = MethodAttributes.Public
+                                                       | MethodAttributes.Virtual
+                                                       | MethodAttributes.Final
+                                                       | MethodAttributes.HideBySig
+                                                       | MethodAttributes.NewSlot;
+        var methodName = method.Name;
+        var parameters = method.GetParameters();
+        var paramTypes = parameters.Select(p => p.ParameterType).ToArray();
+        var returnType = method.ReturnType;
+        MethodBuilder methodBuilder = typeBuilder.DefineMethod(method.Name,
+                                                               methodAttributes,
+                                                               returnType,
+                                                               paramTypes);
+        var compare = TakeAndCompare.Invoke;
+        MethodInfo invokeMethod = compare.GetMethodInfo();
+
+        var print = (object o) => Console.WriteLine(o);
+
+        // Sets the number of generic type parameters
+        var genericTypeNames =
+            paramTypes.Where(p => p.IsGenericParameter).Select(p => p.Name).Distinct().ToArray();
+
+        if (genericTypeNames.Length > 0)
+        {
+            methodBuilder.DefineGenericParameters(genericTypeNames);
+        }
+
+        // Check to see if the last parameter of the method is a CancellationToken
+        bool hasCancellationToken = paramTypes.LastOrDefault() == typeof(CancellationToken);
+        if (hasCancellationToken)
+        {
+            // remove CancellationToken from input paramTypes
+            paramTypes = paramTypes.Take(paramTypes.Length - 1).ToArray();
+        }
+
+        var generator = methodBuilder.GetILGenerator();
+
+        // Load the BlockingCollection<MethodAndParam> field onto the stack
+        generator.Emit(OpCodes.Ldarg_0);
+        generator.Emit(OpCodes.Ldflda, fieldBuilder);
+        generator.Emit(OpCodes.Nop);
+        generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
+        generator.Emit(OpCodes.Ret);
+
+        // this method's name
+        generator.Emit(OpCodes.Ldstr, methodName);
+
+        // Create an new object array to hold all the parameters to this method
+        generator.Emit(OpCodes.Ldc_I4, paramTypes.Length); // Stack:
+        generator.Emit(OpCodes.Newarr, typeof(object)); // allocate object array
+        generator.Emit(OpCodes.Stloc_0);
+
+        // Store each parameter in the object array
+        for (var i = 0; i < paramTypes.Length; i++)
+        {
+            generator.Emit(OpCodes.Ldloc_0); // Object array loaded
+            generator.Emit(OpCodes.Ldc_I4, i);
+            generator.Emit(OpCodes.Ldarg, i + 1); // i + 1
+            generator.Emit(OpCodes.Box, paramTypes[i]);
+            generator.Emit(OpCodes.Stelem_Ref);
+        }
+
+        // Load parameter array on to the stack.
+        generator.Emit(OpCodes.Ldloc_0);
+
+        generator.Emit(OpCodes.Callvirt, invokeMethod);
+
+        // return Task.CompletedTask;
+        generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
+        generator.Emit(OpCodes.Ret);
+    }
+
+    private static void CreateConstructor(TypeBuilder typeBuilder, FieldBuilder fieldBuilder)
+    {
         ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, new Type[] { typeof(BlockingCollection<MethodAndParam>) });
         ILGenerator ctorGenerator = constructorBuilder.GetILGenerator();
         ctorGenerator.Emit(OpCodes.Ldarg_0);
@@ -37,64 +126,24 @@ internal class HubAssertBuilder<T>
         ctorGenerator.Emit(OpCodes.Ldarg_1);
         ctorGenerator.Emit(OpCodes.Stfld, fieldBuilder);
         ctorGenerator.Emit(OpCodes.Ret);
-
-        // Add the method implementations to the type.
-        // Use TakeAndCompare to compare the method name and parameters.
-        foreach (var method in typeof(T).GetMethods())
-        {
-            var parameterTypes = method.GetParameters().Select(p => p.ParameterType).ToArray();
-            MethodBuilder methodBuilder = typeBuilder.DefineMethod(method.Name, MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig | MethodAttributes.NewSlot, method.ReturnType, parameterTypes);
-            var methodGenerator = methodBuilder.GetILGenerator();
-
-            // get method name
-            // get parameters
-            methodGenerator.Emit(OpCodes.Ldstr, method.Name);
-            methodGenerator.Emit(OpCodes.Ldc_I4, method.GetParameters().Length);
-
-            methodGenerator.Emit(OpCodes.Newarr, typeof(object));
-            methodGenerator.Emit(OpCodes.Stloc_0);
-            for (int index = 0; index < method.GetParameters().Length; ++index)
-            {
-                methodGenerator.Emit(OpCodes.Dup);
-                methodGenerator.Emit(OpCodes.Ldc_I4, index);
-                methodGenerator.Emit(OpCodes.Ldarg, index + 1);
-                //ilGenerator.Emit(OpCodes.Box, method.GetParameters()[index].ParameterType);
-                methodGenerator.Emit(OpCodes.Stelem_Ref);
-            }
-            methodGenerator.Emit(OpCodes.Newobj, typeof(MethodAndParam).GetConstructor(new Type[] { typeof(string), typeof(object[]) })!);
-            methodGenerator.Emit(OpCodes.Stloc_0);
-
-            methodGenerator.Emit(OpCodes.Ldarg_0);
-            methodGenerator.Emit(OpCodes.Ldfld, fieldBuilder);
-            methodGenerator.Emit(OpCodes.Ldloc_0);
-            methodGenerator.Emit(OpCodes.Call, typeof(HubAssertBuilder<T>).GetMethod(nameof(TakeAndCompare), BindingFlags.NonPublic | BindingFlags.Static)!);
-            methodGenerator.Emit(OpCodes.Nop);
-            methodGenerator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
-            methodGenerator.Emit(OpCodes.Stloc_1);
-
-            methodGenerator.Emit(OpCodes.Ldloc_1);
-            
-            methodGenerator.Emit(OpCodes.Ret);
-        }
-
-        // Create the type and return it.
-        return typeBuilder.CreateType()!;
     }
 
-    private static void TakeAndCompare(BlockingCollection<MethodAndParam> methodAndParams, MethodAndParam expected)
+    
+}
+internal class TakeAndCompare
+{
+    internal static void Invoke(BlockingCollection<MethodAndParam> methodAndParams, string methodName, object[] parameters)
     {
         CancellationTokenSource cancellationTokenSource = new(1000);
-        var methodAndParam = methodAndParams.Take(cancellationTokenSource.Token);
-        var methodName = methodAndParam.MethodName;
-        var parameters = methodAndParam.Parameters;
-        if (expected.MethodName != methodName)
-        {
-            throw new Exception();
-        }
-        if (!expected.Parameters.SequenceEqual(parameters))
-        {
-            throw new Exception();
-        }
+        //var methodAndParam = methodAndParams.Take(cancellationTokenSource.Token);
+        //if (methodAndParam.MethodName != methodName)
+        //{
+        //    throw new Exception();
+        //}
+        //if (!methodAndParam.Parameters.SequenceEqual(parameters))
+        //{
+        //    throw new Exception();
+        //}
     }
 }
 
