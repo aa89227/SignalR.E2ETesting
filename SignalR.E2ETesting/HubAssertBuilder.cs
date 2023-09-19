@@ -19,14 +19,14 @@ internal class HubAssertBuilder<T>
         AssemblyName assemblyName = new("SignalR.E2ETesting");
         AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
 
-        ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
+        ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule("SignalR.E2ETesting");
         TypeBuilder typeBuilder = moduleBuilder.DefineType("AssertThat", TypeAttributes.Public | TypeAttributes.Class);
 
         // Add the interface implementation to type builder.
         typeBuilder.AddInterfaceImplementation(typeof(T));
 
         // Add the field to type builder.
-        FieldBuilder fieldBuilder = typeBuilder.DefineField("methodAndParams", typeof(BlockingCollection<MethodAndParam>), FieldAttributes.Private);
+        FieldBuilder fieldBuilder = typeBuilder.DefineField("methodAndParams", typeof(BlockingCollection<MethodAndParam>), FieldAttributes.Private | FieldAttributes.InitOnly);
 
         // Add the constructor.
         CreateConstructor(typeBuilder, fieldBuilder);
@@ -45,10 +45,10 @@ internal class HubAssertBuilder<T>
     private static void CreateMethod(TypeBuilder typeBuilder, MethodInfo method, FieldBuilder fieldBuilder)
     {
         var methodAttributes = MethodAttributes.Public
-                                                       | MethodAttributes.Virtual
-                                                       | MethodAttributes.Final
-                                                       | MethodAttributes.HideBySig
-                                                       | MethodAttributes.NewSlot;
+                            | MethodAttributes.Virtual
+                            | MethodAttributes.Final
+                            | MethodAttributes.HideBySig
+                            | MethodAttributes.NewSlot;
         var methodName = method.Name;
         var parameters = method.GetParameters();
         var paramTypes = parameters.Select(p => p.ParameterType).ToArray();
@@ -59,9 +59,6 @@ internal class HubAssertBuilder<T>
                                                                paramTypes);
         var compare = TakeAndCompare.Invoke;
         MethodInfo invokeMethod = compare.GetMethodInfo();
-
-        var print = (object o) => Console.WriteLine(o);
-
         // Sets the number of generic type parameters
         var genericTypeNames =
             paramTypes.Where(p => p.IsGenericParameter).Select(p => p.Name).Distinct().ToArray();
@@ -80,35 +77,40 @@ internal class HubAssertBuilder<T>
         }
 
         var generator = methodBuilder.GetILGenerator();
+        LocalBuilder localBuilder = generator.DeclareLocal(typeof(object[]));
+        //generator.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine",
+        //    new Type[] { typeof(object) })!);
+        //generator.Emit(OpCodes.Nop);
+        //generator.Emit(OpCodes.Nop);
+        //generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
+        //generator.Emit(OpCodes.Ret);
 
-        // Load the BlockingCollection<MethodAndParam> field onto the stack
-        generator.Emit(OpCodes.Ldarg_0);
-        generator.Emit(OpCodes.Ldflda, fieldBuilder);
-        generator.Emit(OpCodes.Nop);
-        generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
-        generator.Emit(OpCodes.Ret);
-
-        // this method's name
-        generator.Emit(OpCodes.Ldstr, methodName);
 
         // Create an new object array to hold all the parameters to this method
         generator.Emit(OpCodes.Ldc_I4, paramTypes.Length); // Stack:
         generator.Emit(OpCodes.Newarr, typeof(object)); // allocate object array
-        generator.Emit(OpCodes.Stloc_0);
-
+        
+        generator.Emit(OpCodes.Stloc, localBuilder);
+        
         // Store each parameter in the object array
         for (var i = 0; i < paramTypes.Length; i++)
         {
-            generator.Emit(OpCodes.Ldloc_0); // Object array loaded
+            generator.Emit(OpCodes.Ldloc, localBuilder); // Object array loaded
             generator.Emit(OpCodes.Ldc_I4, i);
             generator.Emit(OpCodes.Ldarg, i + 1); // i + 1
             generator.Emit(OpCodes.Box, paramTypes[i]);
             generator.Emit(OpCodes.Stelem_Ref);
         }
 
-        // Load parameter array on to the stack.
-        generator.Emit(OpCodes.Ldloc_0);
+        // Load the BlockingCollection<MethodAndParam> field onto the stack
+        generator.Emit(OpCodes.Ldarg_0);
+        generator.Emit(OpCodes.Ldfld, fieldBuilder);
+        
+        // this method's name
+        generator.Emit(OpCodes.Ldstr, methodName);
 
+        // Load parameter array on to the stack.
+        generator.Emit(OpCodes.Ldloc, localBuilder);
         generator.Emit(OpCodes.Callvirt, invokeMethod);
 
         // return Task.CompletedTask;
@@ -118,7 +120,10 @@ internal class HubAssertBuilder<T>
 
     private static void CreateConstructor(TypeBuilder typeBuilder, FieldBuilder fieldBuilder)
     {
-        ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, new Type[] { typeof(BlockingCollection<MethodAndParam>) });
+        ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, new Type[]
+        {
+            typeof(BlockingCollection<MethodAndParam>)
+        });
         ILGenerator ctorGenerator = constructorBuilder.GetILGenerator();
         ctorGenerator.Emit(OpCodes.Ldarg_0);
         ctorGenerator.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
