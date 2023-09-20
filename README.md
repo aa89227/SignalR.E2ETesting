@@ -4,8 +4,8 @@ Using interface to define the contract of the client and server, and using the f
 
 ## Features
 - [x] Asserting value types of signalr messages.
-- [] Asserting array types of signalr messages.
-- [] Asserting reference types of signalr messages.
+- [ ] Asserting array types of signalr messages.
+- [ ] Asserting reference types of signalr messages.
 
 ## How to use
 Ensure the server and client are using the same contract.
