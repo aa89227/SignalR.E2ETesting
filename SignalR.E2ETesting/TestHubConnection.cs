@@ -10,6 +10,7 @@ public class TestHubConnection<TResponses>
     private readonly BlockingCollection<Message> Messages = new();
 
     public TResponses AssertThat { get; init; }
+
     public TestHubConnection(HubConnection hubConnection)
     {
         this.hubConnection = hubConnection;
@@ -17,7 +18,6 @@ public class TestHubConnection<TResponses>
         ListenAllEvents();
         hubConnection.StartAsync();
     }
-
 
     /// <summary>
     /// Subscribes to all events of a SignalR hub client.

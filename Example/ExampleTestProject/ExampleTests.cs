@@ -17,7 +17,6 @@ public class ExampleTests
         // Assert
         await clientA.AssertThat.Broadcast("Hello, World!");
         await clientB.AssertThat.Broadcast("Hello, World!");
-
     }
 
     [TestMethod]

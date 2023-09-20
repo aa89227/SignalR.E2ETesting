@@ -4,7 +4,6 @@ namespace SignalR.E2ETesting;
 
 public class TakeAndCompare
 {
-
     /// <summary>
     /// Assertion method that takes a BlockingCollection of `Message` objects and compares the method name and parameters to the given values.
     /// </summary>

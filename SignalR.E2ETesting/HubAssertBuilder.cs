@@ -1,13 +1,12 @@
-﻿using System.Reflection.Emit;
+﻿using System.Collections.Concurrent;
 using System.Reflection;
-using System.Collections.Concurrent;
+using System.Reflection.Emit;
 
 namespace SignalR.E2ETesting;
 
 internal class HubAssertBuilder<T>
 {
     private static readonly Lazy<Type> typeT = new(() => CreateType());
-
 
     /// <summary>
     /// Builds an instance of the specified type using the given method and parameters.
@@ -19,9 +18,8 @@ internal class HubAssertBuilder<T>
         return (T)Activator.CreateInstance(typeT.Value, methodAndParams)!;
     }
 
-
     /// <summary>
-    /// Creates a dynamic assembly and module that generates a new type, which is returned. 
+    /// Creates a dynamic assembly and module that generates a new type, which is returned.
     /// </summary>
     /// <returns>The newly generated type.</returns>
     private static Type CreateType()
