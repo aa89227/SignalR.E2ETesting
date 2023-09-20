@@ -6,16 +6,27 @@ namespace SignalR.E2ETesting;
 
 internal class HubAssertBuilder<T>
 {
-    private static Lazy<Type> typeT = new(() => CreateType());
+    private static readonly Lazy<Type> typeT = new(() => CreateType());
 
+
+    /// <summary>
+    /// Builds an instance of the specified type using the given method and parameters.
+    /// </summary>
+    /// <param name="methodAndParams">A blocking collection of messages that represents the method and parameters to use for building the instance.</param>
+    /// <returns>An instance of the specified type.</returns>
     internal static T Build(BlockingCollection<Message> methodAndParams)
     {
         return (T)Activator.CreateInstance(typeT.Value, methodAndParams)!;
     }
 
+
+    /// <summary>
+    /// Creates a dynamic assembly and module that generates a new type, which is returned. 
+    /// </summary>
+    /// <returns>The newly generated type.</returns>
     private static Type CreateType()
     {
-        // Create a dynamic assembly and module.
+        // Call the necessary methods to create and define the new type.
         AssemblyName assemblyName = new("SignalR.E2ETesting");
         AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
 
@@ -42,23 +53,36 @@ internal class HubAssertBuilder<T>
         return typeBuilder.CreateType()!;
     }
 
+    /// <summary>
+    /// Creates a method implementation for the current type based on the given method name and parameters.
+    /// </summary>
+    /// <param name="typeBuilder">A TypeBuilder instance to which the new method will be added.</param>
+    /// <param name="method">The MethodInfo object that represents the method being implemented.</param>
+    /// <param name="fieldBuilder">A FieldBuilder instance representing the field to be used in the method.</param>
     private static void CreateMethod(TypeBuilder typeBuilder, MethodInfo method, FieldBuilder fieldBuilder)
     {
+        // Define the method attributes.
         var methodAttributes = MethodAttributes.Public
                             | MethodAttributes.Virtual
                             | MethodAttributes.Final
                             | MethodAttributes.HideBySig
                             | MethodAttributes.NewSlot;
+
+        // Get method information.
         var methodName = method.Name;
         var parameters = method.GetParameters();
         var paramTypes = parameters.Select(p => p.ParameterType).ToArray();
         var returnType = method.ReturnType;
+
+        // Define the MethodBuilder instance.
         MethodBuilder methodBuilder = typeBuilder.DefineMethod(method.Name,
                                                                methodAttributes,
                                                                returnType,
                                                                paramTypes);
-        // 用 反射 獲取 TakeAndCompare.Invoke
+
+        // Get the TakeAndCompare.Invoke method
         var invokeMethod = typeof(TakeAndCompare).GetMethod(nameof(TakeAndCompare.Invoke))!;
+
         // Sets the number of generic type parameters
         var genericTypeNames =
             paramTypes.Where(p => p.IsGenericParameter).Select(p => p.Name).Distinct().ToArray();
@@ -68,24 +92,23 @@ internal class HubAssertBuilder<T>
             methodBuilder.DefineGenericParameters(genericTypeNames);
         }
 
-        // Check to see if the last parameter of the method is a CancellationToken
+        // Check to see if the last parameter of the method is a CancellationToken.
         bool hasCancellationToken = paramTypes.LastOrDefault() == typeof(CancellationToken);
         if (hasCancellationToken)
         {
-            // remove CancellationToken from input paramTypes
+            // Remove CancellationToken from the list of input parameters.
             paramTypes = paramTypes.Take(paramTypes.Length - 1).ToArray();
         }
 
         var generator = methodBuilder.GetILGenerator();
         LocalBuilder localBuilder = generator.DeclareLocal(typeof(object[]));
 
-        // Create an new object array to hold all the parameters to this method
+        // Create a new object array to hold all the parameters to this method.
         generator.Emit(OpCodes.Ldc_I4, paramTypes.Length); // Stack:
         generator.Emit(OpCodes.Newarr, typeof(object)); // allocate object array
-        
         generator.Emit(OpCodes.Stloc, localBuilder);
-        
-        // Store each parameter in the object array
+
+        // Store each parameter in the object array.
         for (var i = 0; i < paramTypes.Length; i++)
         {
             generator.Emit(OpCodes.Ldloc, localBuilder); // Object array loaded
@@ -95,24 +118,29 @@ internal class HubAssertBuilder<T>
             generator.Emit(OpCodes.Stelem_Ref);
         }
 
-        // Load the BlockingCollection<MethodAndParam> field onto the stack
+        // Load the BlockingCollection<MethodAndParam> field onto the stack.
         generator.Emit(OpCodes.Ldarg_0);
         generator.Emit(OpCodes.Ldfld, fieldBuilder);
-        
-        // this method's name
+
+        // Load this method's name.
         generator.Emit(OpCodes.Ldstr, methodName);
 
-        // Load parameter array on to the stack.
+        // Load parameter array onto the stack.
         generator.Emit(OpCodes.Ldloc, localBuilder);
 
-        //generator.Emit(OpCodes.Callvirt, invokeMethod);
+        // Call the TakeAndCompare.Invoke method.
         generator.EmitCall(OpCodes.Call, invokeMethod, null);
 
-        // return Task.CompletedTask;
+        // Return Task.CompletedTask.
         generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
         generator.Emit(OpCodes.Ret);
     }
 
+    /// <summary>
+    /// Creates a constructor method that initializes the instance of this type.
+    /// </summary>
+    /// <param name="typeBuilder">A TypeBuilder instance to which the new constructor will be added.</param>
+    /// <param name="fieldBuilder">A FieldBuilder instance representing the field to be used in the constructor.</param>
     private static void CreateConstructor(TypeBuilder typeBuilder, FieldBuilder fieldBuilder)
     {
         ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, new Type[]
@@ -122,25 +150,9 @@ internal class HubAssertBuilder<T>
         ILGenerator ctorGenerator = constructorBuilder.GetILGenerator();
         ctorGenerator.Emit(OpCodes.Ldarg_0);
         ctorGenerator.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
-        ctorGenerator.Emit(OpCodes.Ldarg_0); //this
+        ctorGenerator.Emit(OpCodes.Ldarg_0);
         ctorGenerator.Emit(OpCodes.Ldarg_1);
         ctorGenerator.Emit(OpCodes.Stfld, fieldBuilder);
         ctorGenerator.Emit(OpCodes.Ret);
-    }
-}
-public class TakeAndCompare
-{
-    public static void Invoke(BlockingCollection<Message> messages, string methodName, object[] parameters)
-    {
-        CancellationTokenSource cancellationTokenSource = new(1000);
-        var message = messages.Take(cancellationTokenSource.Token);
-        if (message.MethodName != methodName)
-        {
-            throw new Exception();
-        }
-        if (!message.Parameters.SequenceEqual(parameters))
-        {
-            throw new Exception();
-        }
     }
 }

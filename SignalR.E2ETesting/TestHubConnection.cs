@@ -18,7 +18,11 @@ public class TestHubConnection<TResponses>
         hubConnection.StartAsync();
     }
 
-    private void ListenAllEvents()
+
+    /// <summary>
+    /// Subscribes to all events of a SignalR hub client.
+    /// </summary>
+    internal void ListenAllEvents()
     {
         Type interfaceType = typeof(TResponses);
         MethodInfo[] methods = interfaceType.GetMethods();
@@ -28,7 +32,7 @@ public class TestHubConnection<TResponses>
             ParameterInfo[] parameters = method.GetParameters();
 
             Type[] parameterTypes = parameters.Select(x => x.ParameterType).ToArray();
-            void handler(object?[] x) => Messages.Add( new(method.Name, x!));
+            void handler(object?[] x) => Messages.Add(new(method.Name, x!));
             hubConnection.On(method.Name, parameterTypes, handler);
         }
     }
