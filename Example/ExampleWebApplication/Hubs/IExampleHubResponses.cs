@@ -2,5 +2,5 @@
 
 public interface IExampleHubResponses
 {
-    Task BroadcastMessage(string message);
+    Task Broadcast(string message);
 }

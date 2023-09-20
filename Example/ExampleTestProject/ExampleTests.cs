@@ -17,8 +17,8 @@ public class ExampleTests
         await clientA.SendAsync("Broadcast", "Hello, World!");
 
         // Assert
-        await clientA.AssertThat.BroadcastMessage("Hello, World!");
-        await clientB.AssertThat.BroadcastMessage("Hello, World!");
+        await clientA.AssertThat.Broadcast("Hello, World!");
+        await clientB.AssertThat.Broadcast("Hello, World!");
 
     }
 }

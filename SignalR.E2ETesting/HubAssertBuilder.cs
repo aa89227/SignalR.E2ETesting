@@ -8,7 +8,7 @@ internal class HubAssertBuilder<T>
 {
     private static Lazy<Type> typeT = new(() => CreateType());
 
-    internal static T Build(BlockingCollection<MethodAndParam> methodAndParams)
+    internal static T Build(BlockingCollection<Message> methodAndParams)
     {
         return (T)Activator.CreateInstance(typeT.Value, methodAndParams)!;
     }
@@ -26,7 +26,7 @@ internal class HubAssertBuilder<T>
         typeBuilder.AddInterfaceImplementation(typeof(T));
 
         // Add the field to type builder.
-        FieldBuilder fieldBuilder = typeBuilder.DefineField("methodAndParams", typeof(BlockingCollection<MethodAndParam>), FieldAttributes.Private | FieldAttributes.InitOnly);
+        FieldBuilder fieldBuilder = typeBuilder.DefineField("message", typeof(BlockingCollection<Message>), FieldAttributes.Private | FieldAttributes.InitOnly);
 
         // Add the constructor.
         CreateConstructor(typeBuilder, fieldBuilder);
@@ -57,8 +57,8 @@ internal class HubAssertBuilder<T>
                                                                methodAttributes,
                                                                returnType,
                                                                paramTypes);
-        var compare = TakeAndCompare.Invoke;
-        MethodInfo invokeMethod = compare.GetMethodInfo();
+        // 用 反射 獲取 TakeAndCompare.Invoke
+        var invokeMethod = typeof(TakeAndCompare).GetMethod(nameof(TakeAndCompare.Invoke))!;
         // Sets the number of generic type parameters
         var genericTypeNames =
             paramTypes.Where(p => p.IsGenericParameter).Select(p => p.Name).Distinct().ToArray();
@@ -78,13 +78,6 @@ internal class HubAssertBuilder<T>
 
         var generator = methodBuilder.GetILGenerator();
         LocalBuilder localBuilder = generator.DeclareLocal(typeof(object[]));
-        //generator.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine",
-        //    new Type[] { typeof(object) })!);
-        //generator.Emit(OpCodes.Nop);
-        //generator.Emit(OpCodes.Nop);
-        //generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
-        //generator.Emit(OpCodes.Ret);
-
 
         // Create an new object array to hold all the parameters to this method
         generator.Emit(OpCodes.Ldc_I4, paramTypes.Length); // Stack:
@@ -111,7 +104,9 @@ internal class HubAssertBuilder<T>
 
         // Load parameter array on to the stack.
         generator.Emit(OpCodes.Ldloc, localBuilder);
-        generator.Emit(OpCodes.Callvirt, invokeMethod);
+
+        //generator.Emit(OpCodes.Callvirt, invokeMethod);
+        generator.EmitCall(OpCodes.Call, invokeMethod, null);
 
         // return Task.CompletedTask;
         generator.EmitCall(OpCodes.Call, typeof(Task).GetProperty(nameof(Task.CompletedTask))!.GetMethod!, null);
@@ -122,7 +117,7 @@ internal class HubAssertBuilder<T>
     {
         ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, new Type[]
         {
-            typeof(BlockingCollection<MethodAndParam>)
+            typeof(BlockingCollection<Message>)
         });
         ILGenerator ctorGenerator = constructorBuilder.GetILGenerator();
         ctorGenerator.Emit(OpCodes.Ldarg_0);
@@ -132,70 +127,18 @@ internal class HubAssertBuilder<T>
         ctorGenerator.Emit(OpCodes.Stfld, fieldBuilder);
         ctorGenerator.Emit(OpCodes.Ret);
     }
-
-    
 }
-internal class TakeAndCompare
+public class TakeAndCompare
 {
-    internal static void Invoke(BlockingCollection<MethodAndParam> methodAndParams, string methodName, object[] parameters)
+    public static void Invoke(BlockingCollection<Message> messages, string methodName, object[] parameters)
     {
         CancellationTokenSource cancellationTokenSource = new(1000);
-        //var methodAndParam = methodAndParams.Take(cancellationTokenSource.Token);
-        //if (methodAndParam.MethodName != methodName)
-        //{
-        //    throw new Exception();
-        //}
-        //if (!methodAndParam.Parameters.SequenceEqual(parameters))
-        //{
-        //    throw new Exception();
-        //}
-    }
-}
-
-interface IExampleHubResponses
-{
-    Task BroadcastMessage(string message);
-    Task Fun1(string message1, string message2);
-}
-
-class TestImpl : IExampleHubResponses
-{
-    private readonly BlockingCollection<MethodAndParam> methodAndParams;
-
-    public TestImpl(BlockingCollection<MethodAndParam> methodAndParams)
-    {
-        this.methodAndParams = methodAndParams;
-    }
-
-    /// <summary>
-    /// 拿出 methodAndParams 中的第一個 MessageAndParam，並檢查 methodName 及 parameters 是否相同
-    /// </summary>
-    /// <param name="message"></param>
-    public Task BroadcastMessage(string message)
-    {
-        var expected = new MethodAndParam("BroadcastMessage", new object[] { message });
-        TakeAndCompare(methodAndParams, expected);
-        return Task.CompletedTask;
-    }
-
-    public Task Fun1(string message1, string message2)
-    {
-        var expected = new MethodAndParam("Fun1", new object[] { message1, message2 });
-        TakeAndCompare(methodAndParams, expected);
-        return Task.CompletedTask;
-    }
-
-    private static void TakeAndCompare(BlockingCollection<MethodAndParam> methodAndParams, MethodAndParam expected)
-    {
-        CancellationTokenSource cancellationTokenSource = new(1000);
-        var methodAndParam = methodAndParams.Take(cancellationTokenSource.Token);
-        var methodName = methodAndParam.MethodName;
-        var parameters = methodAndParam.Parameters;
-        if (expected.MethodName != methodName)
+        var message = messages.Take(cancellationTokenSource.Token);
+        if (message.MethodName != methodName)
         {
             throw new Exception();
         }
-        if (!expected.Parameters.SequenceEqual(parameters))
+        if (!message.Parameters.SequenceEqual(parameters))
         {
             throw new Exception();
         }
