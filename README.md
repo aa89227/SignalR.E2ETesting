@@ -1,5 +1,5 @@
 # SignalR.E2ETesting
-This repository is a framework for end-to-end testing of SignalR clients and servers.
+This repository is a library for end-to-end testing of SignalR clients and servers.
 Using interface to define the contract of the client and server, and using the framework to assert the contract is met.
 
 ## Features
