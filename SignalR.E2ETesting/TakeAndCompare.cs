@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace SignalR.E2ETesting;
 
@@ -16,11 +18,20 @@ public class TakeAndCompare
         var message = messages.Take(cancellationTokenSource.Token);
         if (message.MethodName != methodName)
         {
-            throw new Exception();
+            throw new AssertFailedException($"SignalR assert failed. Method name not equal. Expected:<{parameters}>. Actual:<{message.MethodName}>. ");
         }
-        if (!message.Parameters.SequenceEqual(parameters))
+        var jsonParameters = JsonSerializer.Serialize(parameters);
+        var jsonMessageParameters = JsonSerializer.Serialize(message.Parameters);
+        if (jsonParameters != jsonMessageParameters)
         {
-            throw new Exception();
+            throw new AssertFailedException($"SignalR assert failed. Parameters not equal. Expected:<{jsonParameters}>. Actual:<{jsonMessageParameters}>. ");
+        }
+    }
+    private class AssertFailedException : Exception
+    {
+        public AssertFailedException(string message) : base(message)
+        {
         }
     }
 }
+

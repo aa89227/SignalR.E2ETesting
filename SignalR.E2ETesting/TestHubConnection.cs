@@ -15,14 +15,14 @@ public class TestHubConnection<TResponses>
     {
         this.hubConnection = hubConnection;
         AssertThat = HubAssertBuilder<TResponses>.Build(Messages);
-        ListenAllEvents();
+        ListenAllMessages();
         hubConnection.StartAsync();
     }
 
     /// <summary>
     /// Subscribes to all events of a SignalR hub client.
     /// </summary>
-    internal void ListenAllEvents()
+    internal void ListenAllMessages()
     {
         Type interfaceType = typeof(TResponses);
         MethodInfo[] methods = interfaceType.GetMethods();
