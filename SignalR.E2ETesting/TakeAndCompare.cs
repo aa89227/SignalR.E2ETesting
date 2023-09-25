@@ -1,11 +1,12 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace SignalR.E2ETesting;
 
 public class TakeAndCompare
 {
+    internal static int Timeout { get; set; }
+
     /// <summary>
     /// Assertion method that takes a BlockingCollection of `Message` objects and compares the method name and parameters to the given values.
     /// </summary>
@@ -14,7 +15,7 @@ public class TakeAndCompare
     /// <param name="parameters">An array of objects that represent the method's parameters.</param>
     public static void Invoke(BlockingCollection<Message> messages, string methodName, object[] parameters)
     {
-        CancellationTokenSource cancellationTokenSource = new(1000);
+        CancellationTokenSource cancellationTokenSource = new(Timeout);
         var message = messages.Take(cancellationTokenSource.Token);
         if (message.MethodName != methodName)
         {

@@ -15,7 +15,7 @@ internal class TestServer : WebApplicationFactory<Program>
                 options.HttpMessageHandlerFactory = _ => Server.CreateHandler();
             })
             .Build();
-
-        return new TestHubConnection<IExampleHubResponses>(hubConnection);
+        int timeout = 2000;
+        return new TestHubConnection<IExampleHubResponses>(hubConnection, timeout);
     }
 }

@@ -11,12 +11,13 @@ public class TestHubConnection<TResponses>
 
     public TResponses AssertThat { get; init; }
 
-    public TestHubConnection(HubConnection hubConnection)
+    public TestHubConnection(HubConnection hubConnection, int timeout = 1000)
     {
         this.hubConnection = hubConnection;
         AssertThat = HubAssertBuilder<TResponses>.Build(Messages);
         ListenAllMessages();
         hubConnection.StartAsync();
+        TakeAndCompare.Timeout = timeout;
     }
 
     /// <summary>
