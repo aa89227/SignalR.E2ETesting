@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Example", "Example", "{9ED2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExampleWebApplication", "Example\ExampleWebApplication\ExampleWebApplication.csproj", "{F59FD78B-4872-405D-B03E-0B5A7E65848D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleTestProject", "Example\ExampleTestProject\ExampleTestProject.csproj", "{78D0686B-AD0A-426B-A3CB-DEEFBABF6885}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExampleTestProject", "Example\ExampleTestProject\ExampleTestProject.csproj", "{78D0686B-AD0A-426B-A3CB-DEEFBABF6885}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
