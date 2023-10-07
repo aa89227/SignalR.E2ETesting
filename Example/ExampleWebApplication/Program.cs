@@ -2,7 +2,7 @@ using ExampleWebApplication.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSignalR((options =>
+builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
 });
