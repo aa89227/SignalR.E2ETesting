@@ -1,0 +1,17 @@
+<Project>
+  <Import Project="build\Version.props" />
+  <PropertyGroup>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)\bin\$(Configuration)</PackageOutputPath>
+    <Authors>aa89227</Authors>
+    <Company>aa89227</Company>
+    <LangVersion>latest</LangVersion>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Description>描述信息</Description>
+    <Copyright>Copyright (c) 2023 aa89227</Copyright>
+    <PackageProjectUrl>https://github.com/aa89227/SignalR.E2ETesting</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/aa89227/SignalR.E2ETesting.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>source;dotnet;nuget;msbuild</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

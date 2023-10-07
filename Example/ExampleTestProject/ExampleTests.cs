@@ -1,5 +1,4 @@
 using ExampleWebApplication.Hubs;
-using SignalR.E2ETesting;
 
 namespace ExampleTestProject;
 
