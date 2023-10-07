@@ -44,6 +44,7 @@ jobs:
 
     - name: Build and Pack
       run: |
+        cd ./SignalR.E2ETesting
         dotnet build --configuration Release
         dotnet pack --configuration Release
     - name: Install Nuget
@@ -55,4 +56,5 @@ jobs:
         nuget sources add -name github -Source https://nuget.pkg.github.com/aa89227/index.json -Username aa89227 -Password ${{ secrets.GITHUB_TOKEN }}
     - name: Push generated package to GitHub registry and NuGet
       run: |
+        cd ./SignalR.E2ETesting
         nuget push "./bin/Release/*.nupkg" -Source github -SkipDuplicate
