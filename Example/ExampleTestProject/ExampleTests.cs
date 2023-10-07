@@ -1,8 +1,18 @@
+using ExampleWebApplication.Hubs;
+using SignalR.E2ETesting;
+
 namespace ExampleTestProject;
 
 [TestClass]
 public class ExampleTests
 {
+    [AssemblyInitialize]
+    public static void AssemblyInitialize(TestContext context)
+    {
+        // This method is called once before running the test assembly.
+        TestHubConnection<IExampleHubResponses>.Initial();
+    }
+
     [TestMethod]
     public async Task BroadcastTestAsync()
     {

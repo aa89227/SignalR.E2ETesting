@@ -20,6 +20,11 @@ public class TestHubConnection<TResponses>
         TakeAndCompare.Timeout = timeout;
     }
 
+    public static void Initial()
+    {
+        HubAssertBuilder<TResponses>.Initial();
+    }
+
     /// <summary>
     /// Subscribes to all events of a SignalR hub client.
     /// </summary>
