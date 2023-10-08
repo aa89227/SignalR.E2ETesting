@@ -22,7 +22,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity detailed
+      run: dotnet test --no-build --logger "console;verbosity=detailed"
   publish:
     runs-on: ubuntu-latest
     needs: build_and_test # 表示发布作业需要在构建作业之后运行
