@@ -15,11 +15,6 @@ internal class TestServer : WebApplicationFactory<Program>
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.ServerSentEvents;
                 options.HttpMessageHandlerFactory = _ => Server.CreateHandler();
             })
-            .ConfigureLogging(logging =>
-            {
-                logging.AddDebug();
-                logging.SetMinimumLevel(LogLevel.Trace);
-            })
             .Build();
         int timeout = 5000;
         return new TestHubConnection<IExampleHubResponses>(hubConnection, timeout);
