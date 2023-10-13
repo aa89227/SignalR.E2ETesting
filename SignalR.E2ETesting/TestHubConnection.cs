@@ -20,6 +20,11 @@ public class TestHubConnection<TResponses>
         TakeAndCompare.Timeout = timeout;
     }
 
+    public static void Initial()
+    {
+        HubAssertBuilder<TResponses>.Initial();
+    }
+
     /// <summary>
     /// Subscribes to all events of a SignalR hub client.
     /// </summary>
@@ -33,7 +38,12 @@ public class TestHubConnection<TResponses>
             ParameterInfo[] parameters = method.GetParameters();
 
             Type[] parameterTypes = parameters.Select(x => x.ParameterType).ToArray();
-            void handler(object?[] x) => Messages.Add(new(method.Name, x!));
+            void handler(object?[] x)
+            {
+                Console.WriteLine($"Received message({hubConnection.ConnectionId}): {method.Name}");
+                Messages.Add(new(method.Name, x!));
+            }
+
             hubConnection.On(method.Name, parameterTypes, handler);
         }
     }

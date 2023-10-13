@@ -22,7 +22,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --logger "console;verbosity=detailed"
   publish:
     runs-on: ubuntu-latest
     needs: build_and_test # 表示发布作业需要在构建作业之后运行
@@ -34,8 +34,17 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 7.0.x
+
+    - name: Install dotnet tool
+      run: dotnet tool install -g dotnetCampus.TagToVersion
+    - name: Set tag to version  
+      run: |
+          cd ./SignalR.E2ETesting
+          dotnet TagToVersion -t ${{ github.ref }}
+
     - name: Build and Pack
       run: |
+        cd ./SignalR.E2ETesting
         dotnet build --configuration Release
         dotnet pack --configuration Release
     - name: Install Nuget
@@ -44,8 +53,9 @@ jobs:
         nuget-version: '5.x'
     - name: Add private GitHub registry to NuGet
       run: |
-        nuget sources add -name github -Source https://nuget.pkg.github.com/aa89227/index.json -Username aa89227 -Password ${{ secrets.GITHUB_TOKEN }}
+        nuget sources add -name github -Source https://nuget.pkg.github.com/aa89227/index.json -Username aa89227 -Password ${{ secrets.GITHUB_TOKEN }} -StorePasswordInClearText
     - name: Push generated package to GitHub registry and NuGet
       run: |
-        nuget push ".\SignalR.E2ETesting\bin\Release\*.nupkg" -Source github -SkipDuplicate
-        # nuget push .\SignalR.E2ETesting\bin\Release\*.nupkg -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey ${{ secrets.NugetKey }}
+        cd ./SignalR.E2ETesting
+        nuget push "./bin/Release/*.nupkg" -Source github -SkipDuplicate
+        nuget push "./bin/Release/*.nupkg" -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey ${{ secrets.NUGET_API_KEY }}

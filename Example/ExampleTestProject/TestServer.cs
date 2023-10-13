@@ -1,6 +1,7 @@
 ﻿using ExampleWebApplication.Hubs;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 
 namespace ExampleTestProject;
 

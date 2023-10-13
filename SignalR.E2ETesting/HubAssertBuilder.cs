@@ -6,7 +6,11 @@ namespace SignalR.E2ETesting;
 
 internal class HubAssertBuilder<T>
 {
-    private static readonly Lazy<Type> typeT = new(() => CreateType());
+    private static readonly Lazy<Type> typeT = new(CreateType);
+    internal static void Initial()
+    {
+        _ = (T)Activator.CreateInstance(typeT.Value, new BlockingCollection<Message>())!;
+    }
 
     /// <summary>
     /// Builds an instance of the specified type using the given method and parameters.
