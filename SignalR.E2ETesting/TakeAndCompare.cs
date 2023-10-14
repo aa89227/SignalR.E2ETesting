@@ -16,17 +16,29 @@ public class TakeAndCompare
     public static void Invoke(BlockingCollection<Message> messages, string methodName, object[] parameters)
     {
         CancellationTokenSource cancellationTokenSource = new(Timeout);
-        var message = messages.Take(cancellationTokenSource.Token);
-        if (message.MethodName != methodName)
+        try
         {
-            throw new AssertFailedException($"SignalR assert failed. Method name not equal. Expected:<{parameters}>. Actual:<{message.MethodName}>. ");
+            var message = messages.Take(cancellationTokenSource.Token);
+            if (message.MethodName != methodName)
+            {
+                throw new AssertFailedException($"SignalR assert failed. Method name not equal. Expected:<{parameters}>. Actual:<{message.MethodName}>. ");
+            }
+            var jsonParameters = JsonSerializer.Serialize(parameters);
+            var jsonMessageParameters = JsonSerializer.Serialize(message.Parameters);
+            if (jsonParameters != jsonMessageParameters)
+            {
+                throw new AssertFailedException($"SignalR assert failed. Parameters not equal. Expected:<{jsonParameters}>. Actual:<{jsonMessageParameters}>. ");
+            }
         }
-        var jsonParameters = JsonSerializer.Serialize(parameters);
-        var jsonMessageParameters = JsonSerializer.Serialize(message.Parameters);
-        if (jsonParameters != jsonMessageParameters)
+        catch (OperationCanceledException)
         {
-            throw new AssertFailedException($"SignalR assert failed. Parameters not equal. Expected:<{jsonParameters}>. Actual:<{jsonMessageParameters}>. ");
+            throw new OperationCanceledException($"Operation canceled. Timeout {Timeout} ms");
         }
+        finally
+        {
+            cancellationTokenSource.Dispose();
+        }
+        
     }
     private class AssertFailedException : Exception
     {
