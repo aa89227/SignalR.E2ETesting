@@ -4,6 +4,12 @@ namespace ExampleWebApplication.Hubs;
 
 public class ExampleHub : Hub<IExampleHubResponses>
 {
+    private readonly ILogger<ExampleHub> _logger;
+    public ExampleHub(ILogger<ExampleHub> logger)
+    {
+        _logger = logger;
+    }
+
     public async Task Broadcast(string message)
     {
         await Clients.All.Broadcast(message);

@@ -40,7 +40,6 @@ public class TestHubConnection<TResponses>
             Type[] parameterTypes = parameters.Select(x => x.ParameterType).ToArray();
             void handler(object?[] x)
             {
-                Console.WriteLine($"Received message({hubConnection.ConnectionId}): {method.Name}");
                 Messages.Add(new(method.Name, x!));
             }
 
