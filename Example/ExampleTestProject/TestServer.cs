@@ -19,7 +19,6 @@ internal class TestServer : WebApplicationFactory<Program>
             .ConfigureLogging(logging =>
             {
                 logging.AddDebug();
-                logging.AddEventLog();
                 logging.SetMinimumLevel(LogLevel.Trace);
             })
             .Build();
