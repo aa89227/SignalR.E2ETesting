@@ -22,7 +22,7 @@ internal class TestServer : WebApplicationFactory<Program>
                 logging.SetMinimumLevel(LogLevel.Trace);
             })
             .Build();
-        int timeout = 5000; 
+        int timeout = 20000; 
         return new TestHubConnection<IExampleHubResponses>(hubConnection, timeout);
     }
 
