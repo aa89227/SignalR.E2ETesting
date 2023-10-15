@@ -5,6 +5,8 @@ namespace ExampleTestProject;
 [TestClass]
 public class ExampleTests
 {
+    private TestServer server = default!;
+
     [AssemblyInitialize]
     public static void AssemblyInitialize(TestContext context)
     {
@@ -12,11 +14,22 @@ public class ExampleTests
         TestHubConnection<IExampleHubResponses>.Initial();
     }
 
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        server = new TestServer();
+    }
+
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        server.Dispose();
+    }
+
     [TestMethod]
     public async Task BroadcastTestAsync()
     {
         // Arrange
-        var server = new TestServer();
         var clientA = server.CreateHubConnection("A");
         var clientB = server.CreateHubConnection("B");
 
@@ -32,7 +45,6 @@ public class ExampleTests
     public async Task SendWithObjectTestAsync()
     {
         // Arrange
-        var server = new TestServer();
         var clientA = server.CreateHubConnection("A");
         var clientB = server.CreateHubConnection("B");
         // Act
@@ -46,7 +58,6 @@ public class ExampleTests
     public async Task SendWithCollectionTestAsync()
     {
         // Arrange
-        var server = new TestServer();
         var clientA = server.CreateHubConnection("A");
         var clientB = server.CreateHubConnection("B");
         // Act
