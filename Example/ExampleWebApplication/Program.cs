@@ -6,7 +6,6 @@ builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
 });
-
 var app = builder.Build();
 app.MapHub<ExampleHub>("/examplehub");
 
